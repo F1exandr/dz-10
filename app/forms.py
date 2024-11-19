@@ -16,3 +16,6 @@ class TovarForm(FlaskForm):
     ostatok = StringField('Ostatok')
     submit = SubmitField('Add tovar')
 
+
+# class GoTovarForm(FlaskForm):
+#     submit = SubmitField('Перейти на страницу товара')
