@@ -9,3 +9,10 @@ class LoginForm(FlaskForm):
     remember_me = BooleanField('Keep me logged in')
     submit = SubmitField('Log In')
 
+
+class TovarForm(FlaskForm):
+    name = StringField('Name', validators=[DataRequired(), Length(min=2)])
+    price = StringField('Price', validators=[DataRequired(), Length(min=1, max=6)])
+    ostatok = StringField('Ostatok')
+    submit = SubmitField('Add tovar')
+
