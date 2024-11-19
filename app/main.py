@@ -7,6 +7,7 @@ from flask_sqlalchemy import SQLAlchemy
 from database import Config
 from forms import LoginForm
 
+
 app = Flask(__name__)
 app.config.from_object(Config)
 db = SQLAlchemy(app)
