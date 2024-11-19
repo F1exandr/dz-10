@@ -20,7 +20,6 @@ class Tovar(db.Model):
     ostatok=sa.Column(sa.Integer, default=0)
 
 
-
 with app.app_context():
     db.create_all()
 
