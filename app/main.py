@@ -1,12 +1,17 @@
+import os
 from flask import Flask, render_template, flash, redirect, url_for, request
 from flask_migrate import Migrate
 from flask_sqlalchemy import SQLAlchemy
-
 from database import Config
 from forms import LoginForm, TovarForm
+import uuid
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder='static', template_folder='templates')
 app.config.from_object(Config)
+# Добавляем путь сохранения изображения
+# Это так же можно сделать (и правильно сделать) в классе конфиг
+app.config['UPLOAD_FOLDER'] = '/app/static'
+
 db = SQLAlchemy(app)
 
 migrate = Migrate(app, db)
@@ -46,11 +51,29 @@ def login():
 @app.route('/tovar_add', methods=['GET', 'POST'])
 def tovar_add():
     form = TovarForm()
+    print('Func add work')
     if form.validate_on_submit():
+
+        # загрузка файла для дальнейшей обработки
+        file = request.files['file']
+        print(file.mimetype)
+
+        rasshirenie = file.filename.split(".")[-1]
+        print(rasshirenie)
+        new_filename = uuid.uuid4().hex
+        save_file_name = new_filename + '.' + rasshirenie
+        list_ok = ['jpg', 'png']
+
+        if rasshirenie not in list_ok:
+            return 'Ne to!'
+
+        # сохранение
+        file.save(os.path.join(app.config['UPLOAD_FOLDER'], save_file_name))
+
         name = form.name.data
         price = form.price.data
         ostatok = form.ostatok.data
-        data = Tovar(name=name, price=int(price), ostatok=int(ostatok))
+        data = Tovar(name=name, price=int(price), ostatok=int(ostatok), url_photo=file.filename)
         db.session.add(data)
         db.session.commit()
         flash('Товар добавлен')
@@ -78,6 +101,7 @@ def tovar_kupit():
     print(data)
     return redirect(url_for('index'))
 
+
 @app.route('/tovar_page', methods=['GET', 'POST'])
 def tovar_page():
     id = request.args.get('id')
@@ -86,12 +110,30 @@ def tovar_page():
     print(data)
     return render_template('tovar_page.html', data=data)
 
+
 @app.route('/tovar_new_name/<tovar_id>/<new_name>', methods=['GET', 'POST'])
 def name_tovar(tovar_id: int, new_name: str):
     data = Tovar.query.get(tovar_id)
     data.name = new_name
     db.session.commit()
     return redirect(url_for('index'))
+
+
+@app.route('/tovar_increment/<tovar_id>', methods=['GET', 'POST'])
+def tovar_increment(tovar_id: int):
+    data = Tovar.query.get(tovar_id)
+    data.ostatok += 10
+    db.session.commit()
+    return redirect(url_for('index'))
+
+
+# @app.route('/upload', methods=['POST'])
+# def upload():
+#     if request.method == 'POST':
+#         file = request.files['file']  # загрузка файла для дальнейшей обработки
+#         file.save(os.path.join('app/static', file.filename))  # сохранение
+#
+#         return redirect(request.referrer)
 
 
 if __name__ == '__main__':
