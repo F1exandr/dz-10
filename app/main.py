@@ -4,9 +4,12 @@ from flask_migrate import Migrate
 from flask_sqlalchemy import SQLAlchemy
 from database import Config
 from forms import LoginForm, TovarForm
+from flask_login import LoginManager, current_user, login_user
 import uuid
 
 app = Flask(__name__, static_folder='static', template_folder='templates')
+login_manager = LoginManager(app)
+
 app.config.from_object(Config)
 # Добавляем путь сохранения изображения
 # Это так же можно сделать (и правильно сделать) в классе конфиг
@@ -21,7 +24,7 @@ from models import User, Tovar
 with app.app_context():
     db.create_all()
     have_user = User.query.first()
-    print(have_user)
+    # print(have_user)
     if not have_user:
         from seed import seeds
 
@@ -37,6 +40,23 @@ def index():
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
+    if current_user.is_authenticated:
+        return redirect(url_for('index'))
+    form = LoginForm()
+    if form.validate_on_submit():
+        user = User.query.filter_by(name=form.username.data).first()
+        print('*'*20)
+        print(user)
+        if user is None or not user.check_password(form.pasword.data):
+            flash('Invalid username or password')
+            return redirect(url_for('login'))
+        login_user(user, remember=form.remember_me.data)
+
+        return redirect(url_for('index'))
+    return render_template('login_enter.html', form=form)
+
+@app.route('/user_reg', methods=['GET', 'POST'])
+def user_reg():
     form3 = LoginForm()
     if form3.validate_on_submit():
         name = form3.username.data
@@ -45,35 +65,34 @@ def login():
         db.session.commit()
         flash('ПОЛЬЗОВАТЕЛЬ ' + name + ' ЗАРЕГИСТРИРОВАН')
         return redirect(url_for('index'))
-    return render_template('login.html', form2=form3)
+    return render_template('user_reg.html', form2=form3)
 
 
 @app.route('/tovar_add', methods=['GET', 'POST'])
 def tovar_add():
+
     form = TovarForm()
     print('Func add work')
     if form.validate_on_submit():
 
         # загрузка файла для дальнейшей обработки
         file = request.files['file']
-        print(file.mimetype)
+        print(file.mimetype)  # Print file type to console
 
-        rasshirenie = file.filename.split(".")[-1]
-        print(rasshirenie)
-        new_filename = uuid.uuid4().hex
-        save_file_name = new_filename + '.' + rasshirenie
-        list_ok = ['jpg', 'png']
+        # Выводим файл в консоль
+        file_ext = file.filename.split(".")[-1]
+        print(file_ext)  # Print file extension to console
 
-        if rasshirenie not in list_ok:
-            return 'Ne to!'
+        # Переименуем имя файла, оставив то же самое расширение
+        new_filename = f"{uuid.uuid4().hex}.{file_ext}"
 
         # сохранение
-        file.save(os.path.join(app.config['UPLOAD_FOLDER'], save_file_name))
+        file.save(os.path.join(app.config['UPLOAD_FOLDER'], new_filename))
 
         name = form.name.data
         price = form.price.data
         ostatok = form.ostatok.data
-        data = Tovar(name=name, price=int(price), ostatok=int(ostatok), url_photo=file.filename)
+        data = Tovar(name=name, price=int(price), ostatok=int(ostatok), url_photo=new_filename)
         db.session.add(data)
         db.session.commit()
         flash('Товар добавлен')
@@ -115,14 +134,6 @@ def tovar_page():
 def name_tovar(tovar_id: int, new_name: str):
     data = Tovar.query.get(tovar_id)
     data.name = new_name
-    db.session.commit()
-    return redirect(url_for('index'))
-
-
-@app.route('/tovar_increment/<tovar_id>', methods=['GET', 'POST'])
-def tovar_increment(tovar_id: int):
-    data = Tovar.query.get(tovar_id)
-    data.ostatok += 10
     db.session.commit()
     return redirect(url_for('index'))
 
