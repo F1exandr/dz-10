@@ -138,6 +138,14 @@ def name_tovar(tovar_id: int, new_name: str):
     return redirect(url_for('index'))
 
 
+@app.route('/tovar_increment/<tovar_id>', methods=['GET', 'POST'])
+def tovar_increment(tovar_id: int):
+    data = Tovar.query.get(tovar_id)
+    data.ostatok += 10
+    db.session.commit()
+    return redirect(url_for('index'))
+
+
 # @app.route('/upload', methods=['POST'])
 # def upload():
 #     if request.method == 'POST':
